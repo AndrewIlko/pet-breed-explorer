@@ -3,14 +3,21 @@
 import { useRouter } from 'next/navigation';
 import { usePrefetchBreed } from '../../utils/hooks/useBreeds';
 import { useInfiniteScroll } from '../../utils/hooks/useInfiniteScroll';
+import { useDebounce } from '../../utils/hooks/useDebounce';
 import { BreedCard } from './components/BreedCard';
 import { SearchInput } from './components/SearchInput';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { PetType } from '@/app/utils/constants/pets';
 import { Loading } from '../Loading';
 
 const Breeds = () => {
   const [search, setSearch] = useState('');
+  const [hoveredBreed, setHoveredBreed] = useState<{
+    id: string;
+    petType: PetType;
+  } | null>(null);
+  const debouncedHoveredBreed = useDebounce(hoveredBreed, 300);
+
   const { breeds, isLoading, isFetchingNextPage, hasNextPage, observerRef } =
     useInfiniteScroll({ limit: 10, search });
   const prefetchBreed = usePrefetchBreed();
@@ -18,14 +25,20 @@ const Breeds = () => {
 
   const handleMouseEnter = useCallback(
     (breedId: string, petType: PetType = PetType.DOGS) => {
-      prefetchBreed(breedId, petType);
+      setHoveredBreed({ id: breedId, petType });
     },
-    [prefetchBreed],
+    [],
   );
+
+  useEffect(() => {
+    if (debouncedHoveredBreed) {
+      prefetchBreed(debouncedHoveredBreed.id, debouncedHoveredBreed.petType);
+    }
+  }, [debouncedHoveredBreed, prefetchBreed]);
 
   const handleClick = useCallback(
     (breedId: string, petType: PetType = PetType.DOGS) => {
-      router.push(`/route/${breedId}?type=${petType}`);
+      router.push(`/breed/${breedId}?type=${petType}`);
     },
     [router],
   );
